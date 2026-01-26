@@ -8,21 +8,12 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://unpkg.com/lucide@latest"></script>
 </head>
 <body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen">
     <div id="root"></div>
 
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
-
-        // Simple Icon Component since Lucide-React is tricky in plain HTML
-        const Icon = ({ name, className }) => {
-            useEffect(() => {
-                lucide.createIcons();
-            }, []);
-            return <i data-lucide={name} className={className}></i>;
-        };
 
         function MedicalAI() {
             const [apiKey, setApiKey] = useState('');
@@ -44,13 +35,15 @@
                     setShowApiInput(false);
                     setMessages([{
                         role: 'assistant',
-                        content: "Hello! I'm your Medical AI. Please enter your symptoms or health questions. (Disclaimer: I am an AI, not a doctor)."
+                        content: "Hello! I'm your Medical AI. Please enter your symptoms or health questions. (Note: I am an AI, not a doctor)."
                     }]);
                 }
             };
 
+            // This is the FIXED sendMessage function that talks to your Vercel Backend
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
+                
                 const userMsg = input.trim();
                 const newMessages = [...messages, { role: 'user', content: userMsg }];
                 
@@ -67,21 +60,26 @@
                             apiKey: apiKey.trim(),
                             model: 'llama-3.3-70b-versatile',
                             messages: [
-                                { role: 'system', content: 'You are a professional medical assistant.' },
+                                { role: 'system', content: 'You are a professional medical assistant. Always give a disclaimer.' },
                                 ...newMessages
                             ]
                         })
                     });
 
-                    const data = await response.json();
-                    if (data.error) throw new Error(data.error);
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || 'Server Error');
+                    }
 
+                    const data = await response.json();
+                    
                     setMessages(prev => [...prev, {
                         role: 'assistant',
                         content: data.choices[0].message.content
                     }]);
                 } catch (err) {
-                    setError('Error: Make sure your API key is correct and you have deployed the /api/chat.js file.');
+                    setError('Connection failed. Make sure api/chat.js is in your GitHub api folder.');
+                    console.error(err);
                 } finally {
                     setLoading(false);
                 }
@@ -92,16 +90,18 @@
                     <div className="flex items-center justify-center min-h-screen p-4">
                         <div className="bg-white p-8 rounded-2xl shadow-xl max-w-md w-full text-center">
                             <h1 className="text-2xl font-bold mb-4">Medical AI Setup</h1>
+                            <p className="text-gray-500 mb-6 text-sm">Enter your Groq API Key to begin.</p>
                             <input 
                                 type="password" 
-                                placeholder="Enter Groq API Key (gsk_...)" 
-                                className="w-full p-3 border rounded-lg mb-4"
+                                placeholder="gsk_..." 
+                                className="w-full p-3 border rounded-lg mb-4 outline-none focus:ring-2 focus:ring-indigo-500"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()}
                             />
                             <button 
                                 onClick={handleApiKeySubmit}
-                                className="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold"
+                                className="w-full bg-indigo-600 text-white p-3 rounded-lg font-bold hover:bg-indigo-700 transition"
                             >
                                 Start Chat
                             </button>
@@ -112,33 +112,40 @@
 
             return (
                 <div className="flex flex-col h-screen max-w-4xl mx-auto bg-white shadow-2xl">
-                    <div className="p-4 border-b bg-indigo-600 text-white font-bold flex justify-between">
+                    <div className="p-4 border-b bg-indigo-600 text-white font-bold flex justify-between items-center">
                         <span>Medical AI Assistant</span>
-                        <button onClick={() => setShowApiInput(true)} className="text-xs underline">Reset Key</button>
+                        <button onClick={() => setShowApiInput(true)} className="text-xs bg-indigo-500 px-2 py-1 rounded hover:bg-indigo-400">Change Key</button>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[80%] p-3 rounded-2xl ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-gray-100'}`}>
-                                    {m.content}
+                                <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}>
+                                    <p className="whitespace-pre-wrap">{m.content}</p>
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-gray-400 animate-pulse text-sm">AI is thinking...</div>}
-                        {error && <div className="text-red-500 text-sm bg-red-50 p-2 rounded">{error}</div>}
+                        {loading && <div className="text-indigo-600 text-sm italic animate-pulse">AI is typing...</div>}
+                        {error && <div className="text-red-500 text-sm bg-red-50 p-3 rounded-lg border border-red-100">{error}</div>}
                         <div ref={messagesEndRef} />
                     </div>
 
-                    <div className="p-4 border-t flex gap-2">
+                    <div className="p-4 border-t bg-white flex gap-2">
                         <input 
-                            className="flex-1 p-3 border rounded-xl outline-none" 
-                            placeholder="Type symptoms..."
+                            className="flex-1 p-3 border rounded-xl outline-none focus:border-indigo-500" 
+                            placeholder="Describe your symptoms..."
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                            disabled={loading}
                         />
-                        <button onClick={sendMessage} className="bg-indigo-600 text-white p-3 rounded-xl">Send</button>
+                        <button 
+                            onClick={sendMessage} 
+                            disabled={loading || !input.trim()}
+                            className="bg-indigo-600 text-white px-6 py-2 rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-50"
+                        >
+                            Send
+                        </button>
                     </div>
                 </div>
             );
