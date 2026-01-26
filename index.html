@@ -2,19 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Medical AI</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Med-Visual AI Mobile</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        /* Prevents weird iOS scrolling issues */
-        body { position: fixed; width: 100%; height: 100%; overflow: hidden; }
-        #root { height: 100%; }
+        /* Essential for preventing mobile scroll-bounce and white screens */
+        html, body { 
+            height: 100%; 
+            margin: 0; 
+            padding: 0; 
+            overflow: hidden; 
+            background-color: #f3f4f6;
+            -webkit-overflow-scrolling: touch;
+        }
+        #root { height: 100%; display: flex; flex-direction: column; }
+        .message-list { -webkit-overflow-scrolling: touch; }
+        /* Makes images look great on small screens */
+        .medical-img { 
+            width: 100%; 
+            border-radius: 12px; 
+            margin-top: 8px; 
+            border: 1px solid #e5e7eb;
+            display: block;
+        }
     </style>
 </head>
-<body class="bg-gray-100">
+<body>
     <div id="root"></div>
 
     <script type="text/babel">
@@ -38,17 +54,32 @@
             const handleApiKeySubmit = () => {
                 if (apiKey.trim()) {
                     setShowApiInput(false);
-                    setMessages([{ role: 'assistant', content: "Hello! How can I help with your medical questions today?" }]);
+                    setMessages([{ 
+                        role: 'assistant', 
+                        content: "I am ready. Ask me about symptoms, anatomy, or exercises. I can also generate visuals." 
+                    }]);
                 }
+            };
+
+            // Enhanced Image Parser for Mobile
+            const formatMessage = (text) => {
+                const parts = text.split(/(!\[.*?\]\(.*?\))/g);
+                return parts.map((part, index) => {
+                    const imageMatch = part.match(/!\[(.*?)\]\((.*?)\)/);
+                    if (imageMatch) {
+                        return <img key={index} src={imageMatch[2]} alt={imageMatch[1]} className="medical-img" />;
+                    }
+                    return <span key={index} className="break-words">{part}</span>;
+                });
             };
 
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
                 const userMsg = input.trim();
-                const updatedMessages = [...messages, { role: 'user', content: userMsg }];
+                const newMessages = [...messages, { role: 'user', content: userMsg }];
                 
                 setInput('');
-                setMessages(updatedMessages);
+                setMessages(newMessages);
                 setLoading(true);
                 setError('');
 
@@ -60,14 +91,16 @@
                             apiKey: apiKey.trim(),
                             model: 'llama-3.3-70b-versatile',
                             messages: [
-                                { role: 'system', content: 'You are a medical assistant. Be concise and give disclaimers.' },
-                                ...updatedMessages
+                                { 
+                                    role: 'system', 
+                                    content: 'You are a medical assistant. Use markdown images to explain: ![desc](https://pollinations.ai/p/desc_here?width=1080&height=1080&seed=42&model=flux). Provide disclaimers.' 
+                                },
+                                ...newMessages
                             ]
                         })
                     });
 
                     const data = await response.json();
-                    
                     if (data.error) throw new Error(data.error);
 
                     setMessages(prev => [...prev, {
@@ -75,7 +108,7 @@
                         content: data.choices[0].message.content
                     }]);
                 } catch (err) {
-                    setError('Error: Check your connection or API key.');
+                    setError('Connection lost. Please check your key.');
                 } finally {
                     setLoading(false);
                 }
@@ -83,54 +116,78 @@
 
             if (showApiInput) {
                 return (
-                    <div className="flex items-center justify-center h-full p-6">
-                        <div className="bg-white p-8 rounded-2xl shadow-lg w-full max-w-sm text-center">
-                            <h1 className="text-2xl font-bold mb-2">Medical AI</h1>
-                            <div className="bg-blue-50 p-3 rounded-lg mb-4 text-xs">
-                                <a href="https://console.groq.com/keys" target="_blank" className="text-blue-600 font-bold underline">Get Free API Key Here</a>
+                    <div className="flex items-center justify-center h-full p-6 bg-indigo-50">
+                        <div className="bg-white p-6 rounded-3xl shadow-xl w-full max-w-sm border border-indigo-100">
+                            <h1 className="text-2xl font-bold text-indigo-600 mb-2">Medical Visual AI</h1>
+                            <p className="text-xs text-gray-500 mb-6 font-medium uppercase tracking-tighter">Mobile Edition</p>
+                            
+                            <div className="bg-blue-50 p-4 rounded-2xl mb-6 text-left">
+                                <a href="https://console.groq.com/keys" target="_blank" className="text-blue-600 text-sm font-bold underline">
+                                    Click here for your API Key
+                                </a>
                             </div>
+
                             <input 
                                 type="password" 
-                                placeholder="Paste gsk_ key" 
-                                className="w-full p-3 border rounded-lg mb-4"
+                                placeholder="gsk_..." 
+                                className="w-full p-4 bg-gray-50 border-none rounded-2xl mb-4 text-center text-sm outline-none focus:ring-2 focus:ring-indigo-400"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                             />
-                            <button onClick={handleApiKeySubmit} className="w-full bg-blue-600 text-white p-3 rounded-lg font-bold">Start</button>
+                            
+                            <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-bold shadow-lg active:scale-95 transition-transform">
+                                Open Chat
+                            </button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col h-full bg-white">
-                    <div className="p-4 border-b bg-blue-600 text-white flex justify-between items-center shadow">
-                        <span className="font-bold">Medical AI</span>
-                        <button onClick={() => setShowApiInput(true)} className="text-xs bg-blue-500 px-2 py-1 rounded">Reset</button>
+                <div className="flex flex-col h-full bg-gray-50 overflow-hidden">
+                    {/* Header */}
+                    <div className="p-4 bg-white border-b flex justify-between items-center safe-top shadow-sm">
+                        <div className="flex items-center gap-2 font-bold text-gray-800">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            Med AI
+                        </div>
+                        <button onClick={() => setShowApiInput(true)} className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-3 py-1 rounded-full uppercase">Reset Key</button>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    {/* Chat Area */}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 message-list">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[90%] p-3 rounded-xl ${m.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white border text-gray-800'}`}>
-                                    <p className="text-sm whitespace-pre-wrap">{m.content}</p>
+                                <div className={`max-w-[92%] p-3 rounded-2xl text-sm leading-relaxed shadow-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}>
+                                    {formatMessage(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-blue-600 text-xs animate-pulse font-bold">AI is thinking...</div>}
-                        {error && <div className="text-red-500 text-xs p-2 bg-red-50 rounded">{error}</div>}
-                        <div ref={messagesEndRef} />
+                        {loading && <div className="text-indigo-600 text-[10px] font-bold tracking-widest animate-pulse px-2">GENERATING RESPONSE...</div>}
+                        {error && <div className="text-red-500 text-xs p-3 bg-red-50 rounded-xl border border-red-100">{error}</div>}
+                        <div ref={messagesEndRef} className="h-4" />
                     </div>
 
-                    <div className="p-3 border-t flex gap-2 bg-white pb-8"> {/* Extra padding for mobile keyboards */}
-                        <input 
-                            className="flex-1 p-3 border rounded-xl text-sm outline-none" 
-                            placeholder="Type symptoms..."
-                            value={input}
-                            onChange={(e) => setInput(e.target.value)}
-                            onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                        />
-                        <button onClick={sendMessage} className="bg-blue-600 text-white px-4 py-2 rounded-xl text-sm font-bold">Send</button>
+                    {/* Input Area */}
+                    <div className="p-3 bg-white border-t pb-8"> 
+                        <div className="flex gap-2 max-w-4xl mx-auto items-center">
+                            <input 
+                                className="flex-1 p-4 bg-gray-100 border-none rounded-2xl text-sm outline-none focus:bg-gray-200 transition-colors" 
+                                placeholder="Ask or request an image..."
+                                value={input}
+                                onChange={(e) => setInput(e.target.value)}
+                                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                                disabled={loading}
+                            />
+                            <button 
+                                onClick={sendMessage} 
+                                disabled={loading || !input.trim()}
+                                className="bg-indigo-600 text-white p-4 rounded-2xl shadow-md active:scale-90 transition-transform disabled:opacity-50"
+                            >
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                            </button>
+                        </div>
+                        <p className="text-[9px] text-gray-400 mt-2 text-center uppercase tracking-tighter">AI info is not medical advice</p>
                     </div>
                 </div>
             );
