@@ -9,10 +9,10 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; color: #f1f5f9; font-family: sans-serif; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .medical-img { width: 100%; border-radius: 16px; margin: 10px 0; border: 2px solid #334155; display: block; }
-        input:focus { outline: none; }
+        .medical-img { width: 100%; border-radius: 12px; border: 1px solid #334155; display: block; background: #1e293b; min-height: 200px; }
+        input:focus { outline: none; border-color: #6366f1; }
     </style>
 </head>
 <body>
@@ -25,29 +25,22 @@
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
-            const [error, setError] = useState('');
             const [view, setView] = useState('login'); 
             const endRef = useRef(null);
 
             useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            const startChat = () => {
-                if (apiKey.startsWith('gsk_')) {
-                    setView('chat');
-                    setMessages([{ role: 'assistant', content: "Dark mode active. Ask me for a medical diagram (e.g., 'show me the heart') or symptoms." }]);
-                } else {
-                    alert("Please enter a valid Groq API key starting with gsk_");
-                }
-            };
-
-            const parseImages = (text) => {
-                const parts = text.split(/(https:\/\/pollinations\.ai\/p\/[^\s\)]+)/g);
+            const parseContent = (text) => {
+                // This looks for anything resembling a prompt or a pollinations link
+                const parts = text.split(/(https:\/\/pollinations\.ai\/p\/[^\s?]+|[\w-]+\?width=\d+)/g);
                 return parts.map((part, i) => {
-                    if (part.startsWith('https://pollinations.ai')) {
+                    if (part.includes('width=')) {
+                        // If AI sent a partial link, we rebuild it. If it sent a full link, we use it.
+                        const fullUrl = part.startsWith('http') ? part : `https://pollinations.ai/p/${part}`;
                         return (
-                            <div key={i} className="my-2 p-2 bg-slate-800 rounded-xl border border-slate-700">
-                                <img src={part.trim()} className="medical-img" alt="Visual" />
-                                <p className="text-[10px] text-center text-indigo-400 font-bold uppercase tracking-wider">AI Illustration</p>
+                            <div key={i} className="my-4 p-3 bg-slate-900 rounded-2xl border border-slate-800 shadow-xl">
+                                <img src={fullUrl} className="medical-img" alt="Medical Diagram" />
+                                <p className="text-[10px] text-center text-indigo-400 font-bold mt-2 uppercase tracking-widest">AI Anatomical Illustration</p>
                             </div>
                         );
                     }
@@ -57,34 +50,29 @@
 
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
-                const userText = input.trim();
-                const newHistory = [...messages, { role: 'user', content: userText }];
-                
+                const userMsg = input.trim();
+                const history = [...messages, { role: 'user', content: userMsg }];
                 setInput('');
-                setMessages(newHistory);
+                setMessages(history);
                 setLoading(true);
-                setError('');
 
                 try {
                     const res = await fetch('/api/chat', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            apiKey: apiKey,
+                            apiKey,
                             model: 'llama-3.3-70b-versatile',
                             messages: [
-                                { role: 'system', content: 'You are a medical assistant. If the user asks for a diagram or body part, you MUST provide a raw URL like this: https://pollinations.ai/p/[description]?width=1080&height=1080. Replace [description] with a detailed prompt. Do not use markdown brackets.' },
-                                ...newHistory
+                                { role: 'system', content: 'You are a medical assistant. To show a diagram, you MUST provide this exact string: description_here?width=1080&height=1080. Replace description_here with a detailed prompt like "human_heart_internal_anatomy". Do not use any brackets or other text in that line.' },
+                                ...history
                             ]
                         })
                     });
-
                     const data = await res.json();
-                    if (data.error) throw new Error(data.error.message || "API Error");
-
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
                 } catch (err) {
-                    setError("Failed to get response. Check your API key or connection.");
+                    alert("Error connecting to AI. Please check your key.");
                 } finally {
                     setLoading(false);
                 }
@@ -93,23 +81,28 @@
             if (view === 'login') {
                 return (
                     <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-950">
-                        <div className="w-full max-w-sm p-8 bg-slate-900 border border-slate-800 rounded-[2rem] text-center shadow-2xl">
-                            <h1 className="text-3xl font-black mb-2 text-white">MED AI</h1>
-                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-6">Dark Visual Edition</p>
+                        <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 text-center shadow-2xl">
+                            <h2 className="text-3xl font-black text-white mb-2">MED AI</h2>
+                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Dark Visual System</p>
                             
-                            <div className="mb-6 p-4 bg-slate-800/50 rounded-2xl border border-slate-700">
-                                <p className="text-xs text-slate-400 mb-2 font-medium">No key? Get one for free here:</p>
-                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 text-sm font-bold underline">console.groq.com</a>
+                            <div className="mb-8 p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
+                                <p className="text-xs text-slate-500 mb-2">Need a free API key?</p>
+                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-bold text-sm hover:underline">console.groq.com</a>
                             </div>
 
                             <input 
                                 type="password" 
-                                placeholder="PASTE gsk_ KEY" 
-                                className="w-full p-4 bg-slate-800 text-white rounded-xl mb-4 border border-slate-700 text-center text-sm font-bold"
+                                placeholder="Paste gsk_ key here" 
+                                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                             />
-                            <button onClick={startChat} className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-700 active:scale-95 transition-all">Start Chat</button>
+                            <button 
+                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} 
+                                className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg"
+                            >
+                                Enter System
+                            </button>
                         </div>
                     </div>
                 );
@@ -117,38 +110,37 @@
 
             return (
                 <div className="flex flex-col h-full bg-slate-950">
-                    <div className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-                        <span className="font-black text-indigo-400 text-sm tracking-tighter uppercase">Medical Visual AI</span>
-                        <button onClick={() => setView('login')} className="text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg font-bold">RESET</button>
-                    </div>
+                    <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center shadow-lg">
+                        <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
+                        <button onClick={() => setView('login')} className="text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 font-bold">LOGOUT</button>
+                    </header>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[90%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-indigo-600' : 'bg-slate-900 border border-slate-800'}`}>
-                                    {parseImages(m.content)}
+                                <div className={`max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-md'}`}>
+                                    {parseContent(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-500 text-[10px] font-bold animate-pulse uppercase tracking-widest">Generating...</div>}
-                        {error && <div className="p-3 bg-red-900/30 border border-red-900/50 text-red-400 text-xs rounded-xl">{error}</div>}
-                        <div ref={endRef} />
+                        {loading && <div className="text-indigo-500 text-[10px] font-bold animate-pulse uppercase tracking-widest px-2">AI is sketching...</div>}
+                        <div ref={endRef} className="h-4" />
                     </div>
 
-                    <div className="p-4 bg-slate-900 border-t border-slate-800 pb-10">
-                        <div className="flex gap-2 max-w-2xl mx-auto">
+                    <footer className="p-4 bg-slate-900 border-t border-slate-800 pb-10">
+                        <div className="flex gap-2 max-w-3xl mx-auto">
                             <input 
-                                className="flex-1 p-4 bg-slate-800 rounded-xl text-sm border border-slate-700"
-                                placeholder="Ask for a heart diagram..."
+                                className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm"
+                                placeholder="e.g. 'Show me the lungs'"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                             />
-                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-xl active:scale-90 transition-all">
+                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-xl shadow-lg active:scale-90 transition-all">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
                         </div>
-                    </div>
+                    </footer>
                 </div>
             );
         }
