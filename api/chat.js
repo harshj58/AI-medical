@@ -1,5 +1,10 @@
 export default async function handler(req, res) {
-  const { messages, model, apiKey } = req.body;
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
+
+  const { messages, apiKey } = req.body;
+
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -8,11 +13,15 @@ export default async function handler(req, res) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: model,
-        messages: messages,
+        model: 'llama-3.3-70b-versatile',
+        messages: [
+          { role: "system", content: "You are a helpful medical assistant. Give concise, accurate medical information. Always include a disclaimer that this is not professional medical advice." },
+          ...messages
+        ],
         temperature: 0.7,
       }),
     });
+
     const data = await response.json();
     res.status(200).json(data);
   } catch (error) {
