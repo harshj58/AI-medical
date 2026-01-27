@@ -36,12 +36,11 @@
             const handleApiKeySubmit = () => {
                 if (apiKey.trim()) {
                     setShowApiInput(false);
-                    setMessages([{ role: 'assistant', content: "Dark mode active. If you need a diagram, just ask! I will generate a real-time illustration for you." }]);
+                    setMessages([{ role: 'assistant', content: "Systems online. Dark mode active. Ask me for a medical query or a diagram!" }]);
                 }
             };
 
             const formatMessage = (text) => {
-                // This regex is now extremely broad to catch any link from Pollinations
                 const regex = /(https:\/\/pollinations\.ai\/p\/[^\s\)]+)/g;
                 const parts = [];
                 let lastIndex = 0;
@@ -51,7 +50,7 @@
                     if (match.index > lastIndex) {
                         parts.push(<span key={lastIndex}>{text.substring(lastIndex, match.index)}</span>);
                     }
-                    const imageUrl = match[0].replace(/[.,!?;:]$/, ''); // Clean up trailing punctuation
+                    const imageUrl = match[0].replace(/[.,!?;:]$/, '');
                     parts.push(
                         <div key={match.index} className="my-4 p-2 bg-slate-800/80 rounded-3xl border border-slate-700 shadow-inner">
                             <img 
@@ -76,8 +75,10 @@
 
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
+                
                 const userMsg = input.trim();
                 const newMessages = [...messages, { role: 'user', content: userMsg }];
+                
                 setInput('');
                 setMessages(newMessages);
                 setLoading(true);
@@ -99,11 +100,26 @@
                             ]
                         })
                     });
+
+                    if (!response.ok) {
+                        const errorData = await response.json();
+                        throw new Error(errorData.error || `Error ${response.status}: Failed to reach backend.`);
+                    }
+
                     const data = await response.json();
-                    if (data.error) throw new Error(data.error);
-                    setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+                    
+                    if (!data.choices || !data.choices[0]) {
+                        throw new Error("Invalid response format from AI.");
+                    }
+
+                    setMessages(prev => [...prev, { 
+                        role: 'assistant', 
+                        content: data.choices[0].message.content 
+                    }]);
+
                 } catch (err) {
-                    setError('Connection failed. Verify your key and /api/chat.js file.');
+                    console.error("Chat Error:", err);
+                    setError(err.message);
                 } finally {
                     setLoading(false);
                 }
@@ -114,7 +130,7 @@
                     <div className="flex items-center justify-center h-full p-6 bg-[#0f172a]">
                         <div className="bg-[#1e293b] border border-slate-700 p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center">
                             <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">MED AI</h1>
-                            <p className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.4em] mb-8">Visual System</p>
+                            <p className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.4em] mb-8">Stability Build</p>
                             <input type="password" placeholder="PASTE GROQ KEY" className="w-full p-5 bg-slate-800 text-white rounded-2xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600 transition-all border border-slate-700" value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()} />
                             <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Connect</button>
                         </div>
@@ -144,7 +160,7 @@
                             <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
                             Rendering Visuals
                         </div>}
-                        {error && <div className="mx-4 text-red-400 text-xs p-4 bg-red-950/40 rounded-2xl border border-red-900/50 font-bold">{error}</div>}
+                        {error && <div className="mx-4 text-red-400 text-xs p-4 bg-red-950/40 rounded-2xl border border-red-900/50 font-bold whitespace-pre-wrap">⚠️ {error}</div>}
                         <div ref={messagesEndRef} className="h-10" />
                     </div>
 
