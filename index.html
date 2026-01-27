@@ -3,15 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Med-Visual AI</title>
+    <title>Med-AI Text</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f1f5f9; font-family: sans-serif; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f8fafc; font-family: ui-sans-serif, system-ui, sans-serif; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .medical-img { width: 100%; border-radius: 12px; border: 1px solid #334155; display: block; background: #0f172a; min-height: 250px; object-fit: cover; }
+        .dark-scroll::-webkit-scrollbar { width: 5px; }
+        .dark-scroll::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -29,33 +30,6 @@
 
             useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            const renderContent = (content) => {
-                // This splits the message into text and potential image prompts
-                const parts = content.split(/(\w+\?width=1080[^\s]*)/g);
-                
-                return parts.map((part, i) => {
-                    if (part.includes('width=1080')) {
-                        // CLEANING LOGIC: Removes any brackets, spaces, or symbols that cause 400 errors
-                        const cleanPrompt = part.trim()
-                            .replace(/[()\[\]{}]/g, '') // Remove brackets
-                            .replace(/\s+/g, '_')        // Turn spaces into underscores
-                            .split('?')[0];             // Extract just the description
-                        
-                        const finalUrl = `https://pollinations.ai/p/${cleanPrompt}?width=1080&height=1080&nologo=true`;
-                        
-                        return (
-                            <div key={i} className="my-4 p-2 bg-slate-950 rounded-2xl border border-slate-800">
-                                <img src={finalUrl} className="medical-img" alt="Medical Visual" />
-                                <div className="text-center py-2">
-                                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Anatomical Illustration</span>
-                                </div>
-                            </div>
-                        );
-                    }
-                    return <span key={i} className="text-sm leading-relaxed whitespace-pre-wrap">{part}</span>;
-                });
-            };
-
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
                 const userMsg = input.trim();
@@ -70,17 +44,17 @@
                         body: JSON.stringify({
                             apiKey,
                             model: 'llama-3.3-70b-versatile',
-                            messages: [
-                                { role: 'system', content: 'You are a medical AI. To show a diagram, write: description_here?width=1080&height=1080. Use underscores, no spaces. Then explain below it.' },
-                                ...messages,
-                                { role: 'user', content: userMsg }
-                            ]
+                            messages: [...messages, { role: 'user', content: userMsg }]
                         })
                     });
                     const data = await res.json();
-                    setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+                    if (data.choices) {
+                        setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+                    } else {
+                        throw new Error();
+                    }
                 } catch (err) {
-                    alert("Connection failed.");
+                    setMessages(prev => [...prev, { role: 'assistant', content: "⚠️ Error: Check your API key or connection." }]);
                 } finally {
                     setLoading(false);
                 }
@@ -89,17 +63,17 @@
             if (view === 'login') {
                 return (
                     <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-950">
-                        <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 text-center shadow-2xl">
-                            <h2 className="text-3xl font-black text-white mb-2">MED AI</h2>
-                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Dark Visual System</p>
+                        <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2rem] border border-slate-800 text-center shadow-2xl">
+                            <h1 className="text-3xl font-black text-white mb-2">MED-AI</h1>
+                            <p className="text-indigo-400 text-[10px] font-bold uppercase tracking-widest mb-8">Dark Mode Chat</p>
                             
-                            <div className="mb-8 p-5 bg-slate-950 rounded-2xl border border-slate-800">
-                                <p className="text-[11px] text-slate-500 mb-2 font-bold uppercase">No API Key?</p>
-                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-black text-sm underline underline-offset-4">CONSOLE.GROQ.COM</a>
+                            <div className="mb-8 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                                <p className="text-xs text-slate-500 mb-1">Get your Groq API key:</p>
+                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-bold text-sm underline">console.groq.com</a>
                             </div>
 
-                            <input type="password" placeholder="GSK_ KEY" className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest text-sm">Start Session</button>
+                            <input type="password" placeholder="gsk_..." className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-mono text-sm" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest text-white hover:bg-indigo-500 transition-all">Enter</button>
                         </div>
                     </div>
                 );
@@ -108,27 +82,27 @@
             return (
                 <div className="flex flex-col h-full bg-slate-950">
                     <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
-                        <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
-                        <button onClick={() => setView('login')} className="text-[9px] bg-slate-800 px-3 py-2 rounded-lg border border-slate-700 font-black">LOGOUT</button>
+                        <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Assistant</span>
+                        <button onClick={() => setView('login')} className="text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg text-slate-400 font-bold uppercase">Logout</button>
                     </header>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 dark-scroll">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[92%] p-5 rounded-[1.8rem] ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-200'}`}>
-                                    {renderContent(m.content)}
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-md'}`}>
+                                    <div className="whitespace-pre-wrap">{m.content}</div>
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-500 text-[10px] font-black animate-pulse uppercase px-2">AI Processing...</div>}
+                        {loading && <div className="text-indigo-500 text-[10px] font-black animate-pulse uppercase px-2">Assistant Thinking...</div>}
                         <div ref={endRef} className="h-4" />
                     </div>
 
-                    <footer className="p-4 bg-slate-900 border-t border-slate-800 pb-10">
+                    <footer className="p-4 bg-slate-900 border-t border-slate-800 pb-8">
                         <div className="flex gap-2 max-w-3xl mx-auto">
-                            <input className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl text-white text-sm" placeholder="Ask for a heart diagram..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
-                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-2xl px-6">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                            <input className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm" placeholder="Ask a medical question..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
+                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-xl shadow-lg active:scale-95 transition-all">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
                         </div>
                     </footer>
