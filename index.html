@@ -9,10 +9,12 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f1f5f9; font-family: sans-serif; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .medical-img { width: 100%; border-radius: 12px; border: 1px solid #334155; display: block; background: #1e293b; min-height: 200px; }
+        .medical-img { width: 100%; border-radius: 12px; border: 1px solid #334155; display: block; background: #0f172a; min-height: 250px; object-fit: cover; }
         input:focus { outline: none; border-color: #6366f1; }
+        .dark-scroll::-webkit-scrollbar { width: 4px; }
+        .dark-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
 </head>
 <body>
@@ -30,30 +32,34 @@
 
             useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            const parseContent = (text) => {
-                // This looks for anything resembling a prompt or a pollinations link
-                const parts = text.split(/(https:\/\/pollinations\.ai\/p\/[^\s?]+|[\w-]+\?width=\d+)/g);
-                return parts.map((part, i) => {
-                    if (part.includes('width=')) {
-                        // If AI sent a partial link, we rebuild it. If it sent a full link, we use it.
-                        const fullUrl = part.startsWith('http') ? part : `https://pollinations.ai/p/${part}`;
-                        return (
-                            <div key={i} className="my-4 p-3 bg-slate-900 rounded-2xl border border-slate-800 shadow-xl">
-                                <img src={fullUrl} className="medical-img" alt="Medical Diagram" />
-                                <p className="text-[10px] text-center text-indigo-400 font-bold mt-2 uppercase tracking-widest">AI Anatomical Illustration</p>
+            // NEW INDESTRUCTIBLE PARSER
+            const renderContent = (content) => {
+                // If the message contains a prompt-style string (with width/height)
+                if (content.includes('width=1080')) {
+                    // Extract the prompt parts even if AI messed up the formatting
+                    const cleanPrompt = content.replace(/[^a-zA-Z0-9_?=&]/g, ' ').split(' ').find(p => p.includes('width='));
+                    const finalUrl = `https://pollinations.ai/p/${cleanPrompt || 'medical_illustration'}?width=1080&height=1080&nologo=true`;
+                    
+                    return (
+                        <div className="flex flex-col gap-3">
+                            <div className="p-2 bg-slate-950 rounded-xl border border-slate-800 shadow-2xl">
+                                <img src={finalUrl} className="medical-img" alt="AI Medical Visual" onLoad={() => endRef.current?.scrollIntoView()} />
+                                <div className="text-center py-2">
+                                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.3em]">Anatomical Visual Aid</span>
+                                </div>
                             </div>
-                        );
-                    }
-                    return <span key={i}>{part}</span>;
-                });
+                            <p className="text-sm opacity-90 leading-relaxed">{content.split('?width=')[0].replace(/_/g, ' ')}</p>
+                        </div>
+                    );
+                }
+                return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
             };
 
             const sendMessage = async () => {
                 if (!input.trim() || loading) return;
                 const userMsg = input.trim();
-                const history = [...messages, { role: 'user', content: userMsg }];
+                setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
                 setInput('');
-                setMessages(history);
                 setLoading(true);
 
                 try {
@@ -64,15 +70,16 @@
                             apiKey,
                             model: 'llama-3.3-70b-versatile',
                             messages: [
-                                { role: 'system', content: 'You are a medical assistant. To show a diagram, you MUST provide this exact string: description_here?width=1080&height=1080. Replace description_here with a detailed prompt like "human_heart_internal_anatomy". Do not use any brackets or other text in that line.' },
-                                ...history
+                                { role: 'system', content: 'You are a medical assistant. To show a diagram, strictly write: description_of_part?width=1080&height=1080. Use underscores instead of spaces. Do not use Markdown brackets or URLs.' },
+                                ...messages,
+                                { role: 'user', content: userMsg }
                             ]
                         })
                     });
                     const data = await res.json();
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
                 } catch (err) {
-                    alert("Error connecting to AI. Please check your key.");
+                    alert("Connection failed. Check your GSK key.");
                 } finally {
                     setLoading(false);
                 }
@@ -82,26 +89,26 @@
                 return (
                     <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-950">
                         <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 text-center shadow-2xl">
-                            <h2 className="text-3xl font-black text-white mb-2">MED AI</h2>
-                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Dark Visual System</p>
+                            <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">MED AI</h2>
+                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Visual Diagnostic System</p>
                             
-                            <div className="mb-8 p-4 bg-slate-950/50 rounded-2xl border border-slate-800">
-                                <p className="text-xs text-slate-500 mb-2">Need a free API key?</p>
-                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-bold text-sm hover:underline">console.groq.com</a>
+                            <div className="mb-8 p-5 bg-slate-950 rounded-2xl border border-slate-800">
+                                <p className="text-[11px] text-slate-500 mb-2 font-bold uppercase">No API Key?</p>
+                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-black text-sm hover:text-white transition-colors underline underline-offset-4">CONSOLE.GROQ.COM</a>
                             </div>
 
                             <input 
                                 type="password" 
-                                placeholder="Paste gsk_ key here" 
-                                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold"
+                                placeholder="PASTE gsk_ KEY" 
+                                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold placeholder-slate-600 shadow-inner"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                             />
                             <button 
-                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} 
-                                className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg"
+                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Key must start with gsk_')} 
+                                className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg text-sm"
                             >
-                                Enter System
+                                Start Session
                             </button>
                         </div>
                     </div>
@@ -110,33 +117,36 @@
 
             return (
                 <div className="flex flex-col h-full bg-slate-950">
-                    <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center shadow-lg">
-                        <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
-                        <button onClick={() => setView('login')} className="text-[10px] bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 font-bold">LOGOUT</button>
+                    <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center z-20">
+                        <div className="flex items-center gap-2">
+                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                            <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
+                        </div>
+                        <button onClick={() => setView('login')} className="text-[9px] bg-slate-800 px-3 py-2 rounded-lg border border-slate-700 font-black uppercase tracking-widest">Logout</button>
                     </header>
 
-                    <div className="flex-1 overflow-y-auto p-4 space-y-6">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 dark-scroll">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[90%] p-4 rounded-2xl text-sm leading-relaxed ${m.role === 'user' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-md'}`}>
-                                    {parseContent(m.content)}
+                                <div className={`max-w-[92%] p-5 rounded-[1.8rem] ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none shadow-xl'}`}>
+                                    {renderContent(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-500 text-[10px] font-bold animate-pulse uppercase tracking-widest px-2">AI is sketching...</div>}
+                        {loading && <div className="text-indigo-500 text-[10px] font-black animate-pulse uppercase tracking-[0.3em] px-2">System Processing...</div>}
                         <div ref={endRef} className="h-4" />
                     </div>
 
-                    <footer className="p-4 bg-slate-900 border-t border-slate-800 pb-10">
+                    <footer className="p-4 bg-slate-900/50 backdrop-blur-md border-t border-slate-800 pb-10">
                         <div className="flex gap-2 max-w-3xl mx-auto">
                             <input 
-                                className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-sm"
-                                placeholder="e.g. 'Show me the lungs'"
+                                className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl text-white text-sm placeholder-slate-500 font-medium"
+                                placeholder="Ask: 'Show me the heart anatomy'"
                                 value={input}
                                 onChange={(e) => setInput(e.target.value)}
                                 onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
                             />
-                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-xl shadow-lg active:scale-90 transition-all">
+                            <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-2xl shadow-lg active:scale-90 transition-all px-6">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
                         </div>
