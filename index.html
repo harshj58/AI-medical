@@ -12,7 +12,6 @@
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #020617; color: #f1f5f9; font-family: sans-serif; }
         #root { height: 100%; display: flex; flex-direction: column; }
         .medical-img { width: 100%; border-radius: 12px; border: 1px solid #334155; display: block; background: #0f172a; min-height: 250px; object-fit: cover; }
-        input:focus { outline: none; border-color: #6366f1; }
         .dark-scroll::-webkit-scrollbar { width: 4px; }
         .dark-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
@@ -32,27 +31,28 @@
 
             useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
-            // NEW INDESTRUCTIBLE PARSER
+            // SMART PARSER: Separates the image from the text explanation
             const renderContent = (content) => {
-                // If the message contains a prompt-style string (with width/height)
-                if (content.includes('width=1080')) {
-                    // Extract the prompt parts even if AI messed up the formatting
-                    const cleanPrompt = content.replace(/[^a-zA-Z0-9_?=&]/g, ' ').split(' ').find(p => p.includes('width='));
-                    const finalUrl = `https://pollinations.ai/p/${cleanPrompt || 'medical_illustration'}?width=1080&height=1080&nologo=true`;
-                    
-                    return (
-                        <div className="flex flex-col gap-3">
-                            <div className="p-2 bg-slate-950 rounded-xl border border-slate-800 shadow-2xl">
-                                <img src={finalUrl} className="medical-img" alt="AI Medical Visual" onLoad={() => endRef.current?.scrollIntoView()} />
+                const parts = content.split(/(https:\/\/pollinations\.ai\/p\/[^\s]+|[\w-]+\?width=1080[^\s]*)/g);
+                
+                return parts.map((part, i) => {
+                    if (part.includes('width=1080')) {
+                        // Rebuild the URL correctly
+                        const cleanPart = part.trim().replace(/[()]/g, '');
+                        const finalUrl = cleanPart.startsWith('http') ? cleanPart : `https://pollinations.ai/p/${cleanPart}`;
+                        
+                        return (
+                            <div key={i} className="my-4 p-2 bg-slate-950 rounded-2xl border border-slate-800 shadow-2xl">
+                                <img src={finalUrl} className="medical-img" alt="Medical Diagram" onLoad={() => endRef.current?.scrollIntoView()} />
                                 <div className="text-center py-2">
-                                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-[0.3em]">Anatomical Visual Aid</span>
+                                    <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em]">AI Anatomical Visual</span>
                                 </div>
                             </div>
-                            <p className="text-sm opacity-90 leading-relaxed">{content.split('?width=')[0].replace(/_/g, ' ')}</p>
-                        </div>
-                    );
-                }
-                return <p className="text-sm leading-relaxed whitespace-pre-wrap">{content}</p>;
+                        );
+                    }
+                    // Return the regular text (the explanation)
+                    return <span key={i} className="text-sm leading-relaxed whitespace-pre-wrap">{part}</span>;
+                });
             };
 
             const sendMessage = async () => {
@@ -70,7 +70,7 @@
                             apiKey,
                             model: 'llama-3.3-70b-versatile',
                             messages: [
-                                { role: 'system', content: 'You are a medical assistant. To show a diagram, strictly write: description_of_part?width=1080&height=1080. Use underscores instead of spaces. Do not use Markdown brackets or URLs.' },
+                                { role: 'system', content: 'You are a medical assistant. When explaining a body part, always include a diagram link like: heart_anatomy?width=1080&height=1080. Then, below the link, provide a detailed medical explanation of what the user is seeing.' },
                                 ...messages,
                                 { role: 'user', content: userMsg }
                             ]
@@ -79,7 +79,7 @@
                     const data = await res.json();
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
                 } catch (err) {
-                    alert("Connection failed. Check your GSK key.");
+                    alert("Error. Check your Groq key.");
                 } finally {
                     setLoading(false);
                 }
@@ -88,28 +88,17 @@
             if (view === 'login') {
                 return (
                     <div className="flex flex-col items-center justify-center h-full p-6 bg-slate-950">
-                        <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 text-center shadow-2xl">
-                            <h2 className="text-3xl font-black text-white mb-2 tracking-tighter">MED AI</h2>
-                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Visual Diagnostic System</p>
+                        <div className="w-full max-w-sm p-8 bg-slate-900 rounded-[2.5rem] border border-slate-800 text-center">
+                            <h2 className="text-3xl font-black text-white mb-2">MED AI</h2>
+                            <p className="text-indigo-500 text-[10px] font-bold uppercase tracking-widest mb-8">Dark Mode Active</p>
                             
-                            <div className="mb-8 p-5 bg-slate-950 rounded-2xl border border-slate-800">
-                                <p className="text-[11px] text-slate-500 mb-2 font-bold uppercase">No API Key?</p>
-                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-black text-sm hover:text-white transition-colors underline underline-offset-4">CONSOLE.GROQ.COM</a>
+                            <div className="mb-6 p-4 bg-slate-950 rounded-2xl border border-slate-800">
+                                <p className="text-xs text-slate-500 mb-2 font-bold uppercase tracking-tighter">Get your API Key:</p>
+                                <a href="https://console.groq.com/keys" target="_blank" className="text-indigo-400 font-black text-sm underline underline-offset-4">CONSOLE.GROQ.COM</a>
                             </div>
 
-                            <input 
-                                type="password" 
-                                placeholder="PASTE gsk_ KEY" 
-                                className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold placeholder-slate-600 shadow-inner"
-                                value={apiKey}
-                                onChange={(e) => setApiKey(e.target.value)}
-                            />
-                            <button 
-                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Key must start with gsk_')} 
-                                className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all shadow-lg text-sm"
-                            >
-                                Start Session
-                            </button>
+                            <input type="password" placeholder="GSK_ KEY" className="w-full p-4 bg-slate-800 border border-slate-700 rounded-xl text-white text-center mb-4 font-bold" value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} className="w-full bg-indigo-600 p-4 rounded-xl font-black uppercase tracking-widest hover:bg-indigo-500 transition-all">Connect</button>
                         </div>
                     </div>
                 );
@@ -117,35 +106,26 @@
 
             return (
                 <div className="flex flex-col h-full bg-slate-950">
-                    <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center z-20">
-                        <div className="flex items-center gap-2">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
-                        </div>
-                        <button onClick={() => setView('login')} className="text-[9px] bg-slate-800 px-3 py-2 rounded-lg border border-slate-700 font-black uppercase tracking-widest">Logout</button>
+                    <header className="p-4 bg-slate-900 border-b border-slate-800 flex justify-between items-center">
+                        <span className="font-black text-indigo-400 text-xs tracking-widest uppercase">Medical Visual AI</span>
+                        <button onClick={() => setView('login')} className="text-[9px] bg-slate-800 px-3 py-2 rounded-lg border border-slate-700 font-black">LOGOUT</button>
                     </header>
 
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 dark-scroll">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[92%] p-5 rounded-[1.8rem] ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-slate-900 border border-slate-800 text-slate-200 rounded-tl-none shadow-xl'}`}>
+                                <div className={`max-w-[92%] p-5 rounded-[1.8rem] ${m.role === 'user' ? 'bg-indigo-600 text-white shadow-lg' : 'bg-slate-900 border border-slate-800 text-slate-200 shadow-xl'}`}>
                                     {renderContent(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-500 text-[10px] font-black animate-pulse uppercase tracking-[0.3em] px-2">System Processing...</div>}
+                        {loading && <div className="text-indigo-500 text-[10px] font-black animate-pulse uppercase tracking-[0.3em] px-2">AI Analyzing...</div>}
                         <div ref={endRef} className="h-4" />
                     </div>
 
                     <footer className="p-4 bg-slate-900/50 backdrop-blur-md border-t border-slate-800 pb-10">
                         <div className="flex gap-2 max-w-3xl mx-auto">
-                            <input 
-                                className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl text-white text-sm placeholder-slate-500 font-medium"
-                                placeholder="Ask: 'Show me the heart anatomy'"
-                                value={input}
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                            />
+                            <input className="flex-1 p-4 bg-slate-800 border border-slate-700 rounded-2xl text-white text-sm" placeholder="Ask: 'Explain the heart diagram'" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
                             <button onClick={sendMessage} className="bg-indigo-600 p-4 rounded-2xl shadow-lg active:scale-90 transition-all px-6">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
