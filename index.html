@@ -9,9 +9,9 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; color: #e2e8f0; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #0f172a; color: #f1f5f9; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .medical-img { width: 100%; border-radius: 16px; margin: 12px 0; border: 2px solid #334155; display: block; box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.5); }
+        .medical-img { width: 100%; border-radius: 20px; margin: 12px 0; border: 2px solid #334155; display: block; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
         .dark-scroll::-webkit-scrollbar { width: 6px; }
         .dark-scroll::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
     </style>
@@ -36,14 +36,13 @@
             const handleApiKeySubmit = () => {
                 if (apiKey.trim()) {
                     setShowApiInput(false);
-                    setMessages([{ role: 'assistant', content: "Dark mode active. Image engine ready. Ask me to show you any medical part or exercise!" }]);
+                    setMessages([{ role: 'assistant', content: "Dark mode active. If you need a diagram, just ask! I will generate a real-time illustration for you." }]);
                 }
             };
 
-            // THE ULTIMATE IMAGE PARSER
             const formatMessage = (text) => {
-                // This regex finds standard Markdown images OR raw Pollinations URLs
-                const regex = /(!\[.*?\]\s?\(.*?\))|(https:\/\/pollinations\.ai\/p\/[^\s\)]+)/g;
+                // This regex is now extremely broad to catch any link from Pollinations
+                const regex = /(https:\/\/pollinations\.ai\/p\/[^\s\)]+)/g;
                 const parts = [];
                 let lastIndex = 0;
                 let match;
@@ -52,29 +51,23 @@
                     if (match.index > lastIndex) {
                         parts.push(<span key={lastIndex}>{text.substring(lastIndex, match.index)}</span>);
                     }
-
-                    // Extract URL whether it's in ![alt](url) or just a raw url
-                    let imageUrl = match[0];
-                    if (imageUrl.startsWith('![')) {
-                        const urlMatch = imageUrl.match(/\((.*?)\)/);
-                        imageUrl = urlMatch ? urlMatch[1] : '';
-                    }
-
+                    const imageUrl = match[0].replace(/[.,!?;:]$/, ''); // Clean up trailing punctuation
                     parts.push(
-                        <div key={match.index} className="my-4 flex flex-col items-center bg-slate-800/50 p-2 rounded-2xl border border-slate-700">
+                        <div key={match.index} className="my-4 p-2 bg-slate-800/80 rounded-3xl border border-slate-700 shadow-inner">
                             <img 
-                                src={imageUrl.trim()} 
+                                src={imageUrl} 
                                 alt="Medical Visual" 
                                 className="medical-img" 
                                 onLoad={() => scrollToBottom()}
                                 onError={(e) => { e.target.parentElement.style.display='none'; }} 
                             />
-                            <span className="text-[9px] text-indigo-400 font-black uppercase tracking-[0.2em]">Medical Illustration</span>
+                            <div className="text-center py-1">
+                                <span className="text-[10px] text-indigo-400 font-black uppercase tracking-[0.3em]">AI Medical Diagram</span>
+                            </div>
                         </div>
                     );
                     lastIndex = regex.lastIndex;
                 }
-
                 if (lastIndex < text.length) {
                     parts.push(<span key={lastIndex}>{text.substring(lastIndex)}</span>);
                 }
@@ -100,7 +93,7 @@
                             messages: [
                                 { 
                                     role: 'system', 
-                                    content: 'You are a medical assistant. IMPORTANT: To show an image, you MUST provide a link in this format: https://pollinations.ai/p/prompt_here?width=1080&height=1080&nologo=true. Replace prompt_here with a clear description. Always add medical disclaimers.' 
+                                    content: 'You are a visual medical assistant. Whenever the user mentions a body part, organ, or exercise, you MUST include a direct image link in your response. Link format: https://pollinations.ai/p/[description]?width=1080&height=1080&nologo=true. Replace [description] with a detailed English prompt. Example: https://pollinations.ai/p/detailed_human_heart_anatomy?width=1080&height=1080. DO NOT use markdown, just paste the raw URL.' 
                                 },
                                 ...newMessages
                             ]
@@ -110,7 +103,7 @@
                     if (data.error) throw new Error(data.error);
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
                 } catch (err) {
-                    setError('Connection Error. Check your API key or Vercel logs.');
+                    setError('Connection failed. Verify your key and /api/chat.js file.');
                 } finally {
                     setLoading(false);
                 }
@@ -119,45 +112,47 @@
             if (showApiInput) {
                 return (
                     <div className="flex items-center justify-center h-full p-6 bg-[#0f172a]">
-                        <div className="bg-[#1e293b] border border-slate-700 p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center">
-                            <h1 className="text-3xl font-black text-white mb-2">MED AI</h1>
-                            <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6 underline decoration-2 underline-offset-4">Dark Edition</p>
-                            <input type="password" placeholder="GSK_ KEY" className="w-full p-4 bg-slate-700 text-white rounded-2xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-500 transition-all" value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()} />
-                            <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Connect</button>
-                            <a href="https://console.groq.com/keys" target="_blank" className="block mt-6 text-[10px] text-slate-500 font-bold uppercase tracking-widest hover:text-indigo-400 transition-colors">Get API Key →</a>
+                        <div className="bg-[#1e293b] border border-slate-700 p-10 rounded-[3rem] shadow-2xl w-full max-w-sm text-center">
+                            <h1 className="text-4xl font-black text-white mb-2 tracking-tighter">MED AI</h1>
+                            <p className="text-indigo-500 text-[10px] font-black uppercase tracking-[0.4em] mb-8">Visual System</p>
+                            <input type="password" placeholder="PASTE GROQ KEY" className="w-full p-5 bg-slate-800 text-white rounded-2xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-500 placeholder-slate-600 transition-all border border-slate-700" value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()} />
+                            <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-5 rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Connect</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col h-full bg-[#0f172a] text-slate-200">
-                    <div className="p-4 bg-[#1e293b] border-b border-slate-700 flex justify-between items-center z-10 shadow-2xl">
-                        <div className="flex items-center gap-2 font-black text-indigo-400 uppercase tracking-tighter">
-                            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse shadow-[0_0_10px_rgba(34,197,94,0.5)]"></div>
+                <div className="flex flex-col h-full bg-[#0f172a]">
+                    <div className="p-4 bg-[#1e293b]/80 backdrop-blur-md border-b border-slate-700 flex justify-between items-center z-20 shadow-xl">
+                        <div className="flex items-center gap-3 font-black text-indigo-400 uppercase tracking-tighter text-sm">
+                            <div className="w-2.5 h-2.5 bg-green-500 rounded-full animate-pulse shadow-[0_0_15px_rgba(34,197,94,0.6)]"></div>
                             Medical Visual AI
                         </div>
-                        <button onClick={() => setShowApiInput(true)} className="text-[10px] font-black text-white bg-indigo-600 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-indigo-700 active:scale-95 transition-all">Reset</button>
+                        <button onClick={() => setShowApiInput(true)} className="text-[9px] font-black text-white bg-indigo-600 px-4 py-2 rounded-xl uppercase tracking-widest hover:bg-indigo-700 transition-all">Reset</button>
                     </div>
                     
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 dark-scroll bg-[#0f172a]">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[92%] p-4 rounded-[1.8rem] shadow-xl ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-[#1e293b] border border-slate-700 text-slate-200 rounded-tl-none'}`}>
+                                <div className={`max-w-[94%] p-5 rounded-[2rem] shadow-2xl ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-[#1e293b] border border-slate-700 text-slate-200 rounded-tl-none'}`}>
                                     <div className="text-sm leading-relaxed font-medium">{formatMessage(m.content)}</div>
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-400 text-[10px] font-black animate-pulse px-2 uppercase tracking-[0.3em]">Processing Visuals...</div>}
-                        {error && <div className="text-red-400 text-xs p-4 bg-red-950/30 rounded-2xl border border-red-900/50 font-bold">{error}</div>}
-                        <div ref={messagesEndRef} className="h-8" />
+                        {loading && <div className="flex items-center gap-2 text-indigo-400 text-[10px] font-black animate-pulse px-4 uppercase tracking-[0.4em]">
+                            <div className="w-1 h-1 bg-indigo-400 rounded-full"></div>
+                            Rendering Visuals
+                        </div>}
+                        {error && <div className="mx-4 text-red-400 text-xs p-4 bg-red-950/40 rounded-2xl border border-red-900/50 font-bold">{error}</div>}
+                        <div ref={messagesEndRef} className="h-10" />
                     </div>
 
-                    <div className="p-4 bg-[#1e293b] border-t border-slate-700 pb-10">
-                        <div className="flex gap-2 max-w-4xl mx-auto">
-                            <input className="flex-1 p-4 bg-slate-700 text-white border-none rounded-2xl text-sm outline-none focus:bg-slate-600 placeholder-slate-500 transition-all font-medium" placeholder="Describe symptoms or request a visual..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} disabled={loading} />
-                            <button onClick={sendMessage} disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg active:scale-90 transition-all disabled:opacity-50">
-                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
+                    <div className="p-4 bg-[#1e293b]/50 backdrop-blur-md border-t border-slate-700 pb-10">
+                        <div className="flex gap-2 max-w-4xl mx-auto items-center">
+                            <input className="flex-1 p-5 bg-slate-800 text-white border border-slate-700 rounded-3xl text-sm outline-none focus:bg-slate-700 focus:border-indigo-500 placeholder-slate-500 transition-all font-medium shadow-inner" placeholder="Ask for a heart diagram..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} disabled={loading} />
+                            <button onClick={sendMessage} disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-5 rounded-3xl shadow-xl active:scale-90 transition-all disabled:opacity-50">
+                                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
                         </div>
                     </div>
