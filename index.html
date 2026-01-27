@@ -9,13 +9,14 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; background-color: #f9fafb; -webkit-overflow-scrolling: touch; }
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; -webkit-overflow-scrolling: touch; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .medical-img { width: 100%; border-radius: 16px; margin: 12px 0; border: 2px solid #eef2ff; display: block; shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1); }
-        .message-bubble { word-wrap: break-word; overflow-wrap: break-word; }
+        .medical-img { width: 100%; border-radius: 16px; margin: 12px 0; border: 2px solid #4b5563; display: block; shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); }
+        .dark-scroll::-webkit-scrollbar { width: 6px; }
+        .dark-scroll::-webkit-scrollbar-thumb { background: #4b5563; border-radius: 10px; }
     </style>
 </head>
-<body>
+<body class="bg-[#0f172a] text-slate-200">
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
@@ -27,6 +28,7 @@
             const [loading, setLoading] = useState(false);
             const [error, setError] = useState('');
             const [showApiInput, setShowApiInput] = useState(true);
+            const [isDarkMode, setIsDarkMode] = useState(true);
             const messagesEndRef = useRef(null);
 
             const scrollToBottom = () => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); };
@@ -35,26 +37,34 @@
             const handleApiKeySubmit = () => {
                 if (apiKey.trim()) {
                     setShowApiInput(false);
-                    setMessages([{ role: 'assistant', content: "System ready. I can provide medical info and generate illustrations. What is your question?" }]);
+                    setMessages([{ role: 'assistant', content: "Dark mode initialized. I can provide medical info and generate illustrations. What is your question?" }]);
                 }
             };
 
+            // FIXED IMAGE PARSER: This catches the images even if the AI adds spaces or weird formatting
             const formatMessage = (text) => {
-                // Regex handles various markdown styles and accidental spaces from AI
-                const parts = text.split(/(!\[.*?\]\s?\(.*?\))/g);
-                return parts.map((part, index) => {
-                    const imageMatch = part.match(/!\[(.*?)\]\s?\((.*?)\)/);
-                    if (imageMatch) {
-                        const imageUrl = imageMatch[2].trim();
-                        return (
-                            <div key={index} className="flex flex-col items-center">
-                                <img src={imageUrl} alt="Medical Illustration" className="medical-img" onError={(e) => e.target.style.display='none'} />
-                                <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest mb-2">AI Visual Aid</span>
-                            </div>
-                        );
+                const regex = /!\[(.*?)\]\s?\((.*?)\)/g;
+                const parts = [];
+                let lastIndex = 0;
+                let match;
+
+                while ((match = regex.exec(text)) !== null) {
+                    if (match.index > lastIndex) {
+                        parts.push(<span key={lastIndex}>{text.substring(lastIndex, match.index)}</span>);
                     }
-                    return <span key={index} className="whitespace-pre-wrap">{part}</span>;
-                });
+                    const imageUrl = match[2].trim();
+                    parts.push(
+                        <div key={match.index} className="my-4 flex flex-col items-center">
+                            <img src={imageUrl} alt="Medical Visual" className="medical-img" onError={(e) => e.target.style.display='none'} />
+                            <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-widest">Educational Illustration</span>
+                        </div>
+                    );
+                    lastIndex = regex.lastIndex;
+                }
+                if (lastIndex < text.length) {
+                    parts.push(<span key={lastIndex}>{text.substring(lastIndex)}</span>);
+                }
+                return parts.length > 0 ? parts : <span>{text}</span>;
             };
 
             const sendMessage = async () => {
@@ -76,7 +86,7 @@
                             messages: [
                                 { 
                                     role: 'system', 
-                                    content: 'You are a medical assistant. To show images, use: ![desc](https://pollinations.ai/p/desc?width=1080&height=1080&seed=42). Always provide medical disclaimers.' 
+                                    content: 'You are a medical assistant. When asked for an image or if a visual helps explain anatomy/exercises, use: ![description](https://pollinations.ai/p/detailed_prompt_here?width=1080&height=1080&seed=42). Always provide medical disclaimers.' 
                                 },
                                 ...newMessages
                             ]
@@ -86,7 +96,7 @@
                     if (data.error) throw new Error(data.error);
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
                 } catch (err) {
-                    setError('Connection Error. Ensure /api/chat.js is deployed.');
+                    setError('Connection Error. Ensure /api/chat.js is deployed in your /api folder.');
                 } finally {
                     setLoading(false);
                 }
@@ -94,46 +104,48 @@
 
             if (showApiInput) {
                 return (
-                    <div className="flex items-center justify-center h-full p-6 bg-indigo-600">
-                        <div className="bg-white p-8 rounded-[2rem] shadow-2xl w-full max-w-sm text-center">
-                            <h1 className="text-3xl font-black text-gray-800 mb-2">MED AI</h1>
-                            <p className="text-gray-400 text-sm mb-6 uppercase tracking-widest font-bold">Visual Edition</p>
-                            <div className="bg-indigo-50 p-4 rounded-2xl mb-6 text-xs text-indigo-700 font-medium">
-                                Get your free key at <a href="https://console.groq.com/keys" target="_blank" className="underline font-black text-indigo-900">console.groq.com</a>
-                            </div>
-                            <input type="password" placeholder="PASTE GSK_ KEY" className="w-full p-4 bg-gray-100 border-none rounded-2xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-400" value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()} />
-                            <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all uppercase tracking-widest">Connect</button>
+                    <div className={`flex items-center justify-center h-full p-6 ${isDarkMode ? 'bg-[#0f172a]' : 'bg-indigo-600'}`}>
+                        <div className={`${isDarkMode ? 'bg-[#1e293b] border-slate-700' : 'bg-white'} p-8 rounded-[2.5rem] shadow-2xl w-full max-w-sm text-center border`}>
+                            <h1 className={`text-3xl font-black mb-2 ${isDarkMode ? 'text-white' : 'text-slate-800'}`}>MED AI</h1>
+                            <p className="text-indigo-400 text-xs font-bold uppercase tracking-widest mb-6 underline decoration-2">Dark Mode Active</p>
+                            <input type="password" placeholder="ENTER GSK_ KEY" className={`w-full p-4 rounded-2xl mb-4 text-center font-bold outline-none focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-slate-700 text-white placeholder-slate-500' : 'bg-slate-100'}`} value={apiKey} onChange={(e) => setApiKey(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && handleApiKeySubmit()} />
+                            <button onClick={handleApiKeySubmit} className="w-full bg-indigo-600 text-white p-4 rounded-2xl font-black shadow-lg hover:bg-indigo-700 active:scale-95 transition-all">START</button>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="flex flex-col h-full bg-white">
-                    <div className="p-4 bg-white border-b flex justify-between items-center shadow-sm z-10">
-                        <div className="flex items-center gap-2 font-black text-indigo-600 uppercase tracking-tighter">
+                <div className={`flex flex-col h-full ${isDarkMode ? 'bg-[#0f172a] text-slate-200' : 'bg-white text-slate-800'}`}>
+                    <div className={`p-4 border-b flex justify-between items-center z-10 ${isDarkMode ? 'bg-[#1e293b] border-slate-700 shadow-xl' : 'bg-white border-slate-200 shadow-sm'}`}>
+                        <div className="flex items-center gap-2 font-black text-indigo-400 uppercase tracking-tighter">
                             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                            Medical Visual AI
+                            Medical AI Visuals
                         </div>
-                        <button onClick={() => setShowApiInput(true)} className="text-[10px] font-black text-white bg-indigo-600 px-3 py-1.5 rounded-full uppercase tracking-widest">Reset</button>
+                        <div className="flex gap-2">
+                            <button onClick={() => setIsDarkMode(!isDarkMode)} className="p-2 rounded-xl bg-slate-700/50 hover:bg-slate-700 transition-colors text-xl">
+                                {isDarkMode ? '☀️' : '🌙'}
+                            </button>
+                            <button onClick={() => setShowApiInput(true)} className="text-[10px] font-black text-white bg-indigo-600 px-3 py-2 rounded-xl uppercase tracking-widest">Reset</button>
+                        </div>
                     </div>
                     
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
+                    <div className={`flex-1 overflow-y-auto p-4 space-y-4 dark-scroll ${isDarkMode ? 'bg-[#0f172a]' : 'bg-slate-50'}`}>
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[88%] p-4 rounded-3xl shadow-sm message-bubble ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : 'bg-white text-gray-800 rounded-tl-none border border-gray-100'}`}>
+                                <div className={`max-w-[90%] p-4 rounded-[1.5rem] shadow-sm ${m.role === 'user' ? 'bg-indigo-600 text-white rounded-tr-none' : (isDarkMode ? 'bg-[#1e293b] border-slate-700 text-slate-200 rounded-tl-none border' : 'bg-white text-slate-800 rounded-tl-none border border-slate-200')}`}>
                                     <div className="text-sm leading-relaxed font-medium">{formatMessage(m.content)}</div>
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-indigo-600 text-[10px] font-black animate-pulse px-2 uppercase tracking-widest">AI is analyzing...</div>}
-                        {error && <div className="text-red-500 text-xs p-3 bg-red-50 rounded-2xl border border-red-100">{error}</div>}
+                        {loading && <div className="text-indigo-400 text-[10px] font-black animate-pulse px-2 uppercase tracking-widest">Thinking & Drawing...</div>}
+                        {error && <div className="text-red-400 text-xs p-4 bg-red-950/30 rounded-2xl border border-red-900/50">{error}</div>}
                         <div ref={messagesEndRef} className="h-6" />
                     </div>
 
-                    <div className="p-4 bg-white border-t pb-10 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)]">
+                    <div className={`p-4 border-t pb-10 ${isDarkMode ? 'bg-[#1e293b] border-slate-700' : 'bg-white border-slate-200 shadow-inner'}`}>
                         <div className="flex gap-2 max-w-4xl mx-auto">
-                            <input className="flex-1 p-4 bg-gray-100 border-none rounded-2xl text-sm outline-none focus:bg-gray-200 transition-all font-medium" placeholder="Describe symptoms or ask for an image..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} disabled={loading} />
+                            <input className={`flex-1 p-4 border-none rounded-2xl text-sm outline-none transition-all font-medium ${isDarkMode ? 'bg-slate-700 text-white focus:bg-slate-600 placeholder-slate-500' : 'bg-slate-100 text-slate-800'}`} placeholder="Ask or request a medical visual..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} disabled={loading} />
                             <button onClick={sendMessage} disabled={loading || !input.trim()} className="bg-indigo-600 text-white p-4 rounded-2xl shadow-lg active:scale-90 transition-all disabled:opacity-50">
                                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg>
                             </button>
