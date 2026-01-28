@@ -2,116 +2,114 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <title>Med-AI Pro</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        body { margin: 0; padding: 0; background-color: #030712; color: white; font-family: ui-sans-serif, system-ui; height: 100vh; overflow: hidden; }
+        #root { height: 100%; display: flex; flex-direction: column; }
+        /* THE WATERMARK */
+        .watermark-bg { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; opacity: 0.1; pointer-events: none; z-index: 0; font-weight: 900; text-transform: uppercase; letter-spacing: 0.4em; font-size: 2.5rem; text-align: center; line-height: 1.2; }
+        .login-card { background-color: #0f172a; border: 1px solid #1e293b; border-radius: 3rem; padding: 3rem; width: 100%; max-width: 420px; text-align: center; z-index: 10; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8); }
+        input { outline: none !important; -webkit-tap-highlight-color: transparent; }
+    </style>
 </head>
-<body class="bg-slate-950 text-white">
+<body>
     <div id="root"></div>
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
+        const HeartLogo = () => (
+            <svg className="mx-auto mb-4 text-red-500" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+        );
+
         function App() {
             const [apiKey, setApiKey] = useState('');
+            const [view, setView] = useState('login');
             const [messages, setMessages] = useState([]);
             const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
-            const [view, setView] = useState('login'); 
 
-            const cleanDisplay = (text) => text.replace(/\*/g, '');
+            const cleanText = (t) => t.replace(/\*/g, '');
 
-            const sendMessage = async () => {
-                if (!input.trim()) return;
+            const onChat = async () => {
+                if(!input.trim()) return;
                 const userMsg = input.trim();
-                setMessages([...messages, { role: 'user', content: userMsg }]);
+                setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
                 setInput('');
                 setLoading(true);
                 try {
                     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [...messages, { role: 'user', content: userMsg }] })
+                        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [...messages, { role: 'user', content: userMsg }] })
                     });
                     const data = await res.json();
                     setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
-                } catch (e) { alert("Check API Key"); } finally { setLoading(false); }
+                } catch(e) { alert("Check Connection or Key"); } finally { setLoading(false); }
             };
 
             if (view === 'login') {
                 return (
-                    <div className="h-screen w-full flex flex-col items-center justify-center p-6 bg-slate-950 relative">
+                    <div className="relative h-full flex items-center justify-center p-6 bg-[#030712]">
+                        {/* THE BACKGROUND TEXT */}
+                        <div className="watermark-bg">Powered by<br/>Gemini & Groq</div>
                         
-                        {/* THE WATERMARK YOU REQUESTED */}
-                        <div className="absolute top-10 text-red-500 font-black tracking-[0.3em] uppercase opacity-50 text-sm">
-                            Powered by Gemini & Groq
-                        </div>
-
-                        <div className="w-full max-w-sm bg-slate-900 border border-slate-800 p-8 rounded-[2.5rem] text-center shadow-2xl">
-                            <h1 className="text-4xl font-black text-red-500 mb-2 uppercase">MED-AI</h1>
-                            <p className="text-[10px] tracking-widest uppercase opacity-40 mb-8 font-bold">Clinical System</p>
-
-                            {/* THE GROQ LINK YOU REQUESTED */}
-                            <a href="https://console.groq.com/keys" target="_blank" className="block w-full py-4 mb-6 rounded-2xl bg-red-600/10 border border-red-600/30 text-red-500 font-black uppercase text-xs tracking-tighter hover:bg-red-600/20 transition-all">
-                                CLICK HERE TO GET GROQ API KEY
+                        <div className="login-card">
+                            <HeartLogo />
+                            <h1 className="text-4xl font-black mb-1 tracking-tighter uppercase">MED-AI PRO</h1>
+                            <p className="text-red-500 text-[10px] font-bold uppercase tracking-[0.3em] mb-10">Clinical Assistant</p>
+                            
+                            {/* THE GROQ LINK */}
+                            <a href="https://console.groq.com/keys" target="_blank" className="block w-full py-3 mb-4 rounded-xl border border-red-500/20 bg-red-500/5 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all">
+                                Get Groq API Key
                             </a>
-
+                            
                             <input 
                                 type="password" 
-                                placeholder="ENTER GSK_ KEY HERE" 
-                                className="w-full p-4 rounded-xl bg-slate-800 border border-slate-700 text-white text-center font-bold mb-4 focus:border-red-500 transition-all outline-none"
+                                placeholder="Enter clinical key" 
+                                className="w-full bg-[#1e293b] border border-[#334155] p-4 rounded-2xl mb-4 text-center text-sm font-bold text-white focus:border-red-500 transition-all"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                             />
-
+                            
                             <button 
-                                onClick={() => apiKey.includes('gsk_') ? setView('chat') : alert('Enter Valid Key')}
-                                className="w-full p-4 rounded-xl bg-red-600 text-white font-black uppercase tracking-widest active:scale-95 transition-all shadow-lg shadow-red-600/20"
+                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid API Key')}
+                                className="w-full bg-red-600 text-white font-black uppercase py-4 rounded-2xl shadow-xl shadow-red-900/20 active:scale-95 transition-all"
                             >
-                                START AI
+                                INITIALIZE SYSTEM
                             </button>
-                        </div>
-
-                        {/* SECONDARY WATERMARK AT BOTTOM */}
-                        <div className="absolute bottom-10 text-slate-600 font-bold uppercase text-[9px] tracking-widest">
-                            Secure Medical Interface
+                            
+                            <p className="mt-10 text-[9px] uppercase opacity-40 font-bold tracking-[0.2em]">HIPAA Compliant Interface</p>
                         </div>
                     </div>
                 );
             }
 
             return (
-                <div className="h-screen flex flex-col bg-slate-950">
+                <div className="flex flex-col h-full bg-slate-950 text-white">
                     <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-                        <span className="font-black text-red-500 tracking-tighter">MED-AI PRO</span>
-                        <button onClick={() => setView('login')} className="text-[10px] font-bold opacity-50 uppercase">Logout</button>
+                        <span className="text-red-500 font-black tracking-tighter">MED-AI PRO</span>
+                        <button onClick={() => setView('login')} className="text-[10px] font-bold opacity-50 uppercase">Terminate Session</button>
                     </header>
-                    
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-200'}`}>
-                                    {cleanDisplay(m.content)}
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-100'}`}>
+                                    {cleanText(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-red-500 font-bold text-xs animate-pulse uppercase">Analyzing...</div>}
                     </div>
-
-                    <div className="fixed bottom-0 w-full p-4 bg-slate-950/80 backdrop-blur-md border-t border-slate-800">
+                    <footer className="p-4 bg-slate-950 border-t border-slate-800 pb-10">
                         <div className="flex gap-2 max-w-2xl mx-auto">
-                            <input 
-                                className="flex-1 p-4 rounded-xl bg-slate-800 border border-slate-700 text-white outline-none" 
-                                placeholder="Symptoms or questions..." 
-                                value={input} 
-                                onChange={(e) => setInput(e.target.value)}
-                                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
-                            />
-                            <button onClick={sendMessage} className="bg-red-600 p-4 rounded-xl px-6 font-bold">SEND</button>
+                            <input className="flex-1 p-4 rounded-xl bg-slate-900 border border-slate-800 text-white outline-none" value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && onChat()} />
+                            <button onClick={onChat} className="bg-red-600 px-6 rounded-xl font-bold">SEND</button>
                         </div>
-                    </div>
+                    </footer>
                 </div>
             );
         }
