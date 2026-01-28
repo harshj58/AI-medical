@@ -17,9 +17,9 @@
             width: 100%; 
             text-align: center; 
             opacity: 0.5; 
-            font-size: 12px; 
+            font-size: 14px; 
             font-weight: 900; 
-            letter-spacing: 0.1em; 
+            letter-spacing: 0.15em; 
             text-transform: uppercase; 
             pointer-events: none; 
             z-index: 0; 
@@ -73,25 +73,28 @@
             if (view === 'login') {
                 return (
                     <div className={`relative flex items-center justify-center h-full p-6 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
-                        <div className={`w-full max-w-sm p-10 rounded-[3rem] shadow-2xl text-center border z-10 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                        {/* THE POWERED BY WATERMARK */}
+                        <div className={`watermark ${isDarkMode ? 'text-red-500/30' : 'text-slate-400'}`}>
+                            Powered by Gemini & Groq
+                        </div>
+
+                        <div className={`w-full max-w-sm p-10 rounded-[3.5rem] shadow-2xl text-center border z-10 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className="flex justify-center mb-6"><MedLogo size={54} /></div>
-                            <h1 className="text-3xl font-black mb-1 tracking-tight uppercase text-red-600">Med-AI Pro</h1>
-                            <p className="opacity-80 text-[10px] font-bold uppercase tracking-[0.3em] mb-8">Clinical Console</p>
+                            <h1 className="text-3xl font-black mb-1 tracking-tight uppercase text-red-500">Med-AI Pro</h1>
+                            <p className="opacity-80 text-[10px] font-bold uppercase tracking-[0.3em] mb-8">Clinical Assistant</p>
                             
-                            {/* THE GROQ LINK */}
+                            {/* THE GROQ LINK BUTTON */}
                             <div className="mb-6">
-                                <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="block w-full p-3 rounded-xl border border-red-500/30 bg-red-500/5 text-red-500 text-[10px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all">
+                                <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="block w-full p-4 rounded-2xl bg-red-500/10 text-red-500 text-[11px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20 transition-all">
                                     Get Groq API Key
                                 </a>
                             </div>
 
-                            <input type="password" placeholder="Enter gsk_ key" className={`w-full p-4 rounded-2xl mb-4 text-center text-sm font-bold border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'}`} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
-                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} className="w-full bg-red-600 p-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all">Start Session</button>
-                        </div>
-                        
-                        {/* THE POWERED BY WATERMARK */}
-                        <div className={`watermark ${isDarkMode ? 'text-red-500/40' : 'text-slate-400'}`}>
-                            Powered by Gemini & Groq
+                            <input type="password" placeholder="Paste gsk_ key here" className={`w-full p-4 rounded-2xl mb-4 text-center text-sm font-bold border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'}`} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                            
+                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Please enter a valid Groq key')} className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase text-white shadow-xl active:scale-95 transition-all">
+                                Launch System
+                            </button>
                         </div>
                     </div>
                 );
@@ -100,16 +103,18 @@
             return (
                 <div className={`flex flex-col h-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
                     <header className={`p-4 border-b flex justify-between items-center z-30 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
-                        <div className="flex items-center gap-2"><MedLogo size={22} /><span className="font-black text-xs uppercase tracking-widest text-red-600">Med-AI Pro</span></div>
-                        <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-slate-700/20"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                        <div className="flex items-center gap-2"><MedLogo size={22} /><span className="font-black text-xs uppercase tracking-widest text-red-500">Med-AI Pro</span></div>
+                        <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-slate-700/20 active:scale-90 transition-all">
+                            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                        </button>
                     </header>
                     {showSettings && (
-                        <div className={`absolute top-16 right-4 w-64 rounded-[2rem] shadow-2xl p-5 z-40 border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Clinical Models</p>
-                             <button onClick={() => { setActiveModel('llama-3.3-70b-versatile'); setShowSettings(false); }} className={`w-full text-left p-3 rounded-xl text-xs font-bold mb-2 border ${activeModel === 'llama-3.3-70b-versatile' ? 'border-red-500 bg-red-500/10 text-red-400' : (isDarkMode ? 'border-slate-800' : 'border-slate-100')}`}>Llama 3.3 (Expert)</button>
-                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Interface</p>
-                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full p-3 rounded-xl mb-4 text-xs font-bold bg-red-600 text-white">Toggle Theme</button>
-                             <button onClick={() => setView('login')} className="w-full text-red-500 text-[10px] font-black uppercase tracking-widest text-center">Logout</button>
+                        <div className={`absolute top-16 right-4 w-64 rounded-[2rem] shadow-2xl p-6 z-40 border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Diagnostic AI</p>
+                             <button onClick={() => { setActiveModel('llama-3.3-70b-versatile'); setShowSettings(false); }} className={`w-full text-left p-3 rounded-xl text-xs font-bold mb-3 border ${activeModel === 'llama-3.3-70b-versatile' ? 'border-red-500 bg-red-500/10 text-red-400' : (isDarkMode ? 'border-slate-800' : 'border-slate-100')}`}>Llama 3.3 (Expert)</button>
+                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Visuals</p>
+                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full p-3 rounded-xl mb-6 text-xs font-bold bg-red-600 text-white shadow-md">Switch Theme</button>
+                             <button onClick={() => setView('login')} className="w-full text-red-500 text-[11px] font-black uppercase tracking-widest text-center">Logout Session</button>
                         </div>
                     )}
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24" onClick={() => setShowSettings(false)}>
@@ -121,7 +126,7 @@
                     </div>
                     <footer className="fixed bottom-0 left-0 right-0 p-4 border-t pb-8 bg-inherit">
                         <div className="flex gap-2 max-w-3xl mx-auto">
-                            <input className={`flex-1 p-4 rounded-2xl text-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200'}`} placeholder="Describe symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
+                            <input className={`flex-1 p-4 rounded-2xl text-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200'}`} placeholder="Describe clinical symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
                             <button onClick={sendMessage} className="bg-red-600 p-4 rounded-2xl shadow-lg px-6 active:scale-90 transition-all"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                         </div>
                     </footer>
