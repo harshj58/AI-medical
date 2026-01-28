@@ -1,31 +1,120 @@
-export default async function handler(req, res) {
-  if (req.method !== 'POST') return res.status(405).json({ error: 'Method not allowed' });
-  
-  const { messages, apiKey, model } = req.body;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Med-AI Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+        #root { height: 100%; display: flex; flex-direction: column; }
+        .watermark { position: absolute; bottom: 20px; width: 100%; text-align: center; opacity: 0.2; font-size: 10px; font-weight: 900; letter-spacing: 0.2em; text-transform: uppercase; pointer-events: none; }
+        input, button { outline: none !important; -webkit-tap-highlight-color: transparent; }
+    </style>
+</head>
+<body class="bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100">
+    <div id="root"></div>
+    <script type="text/babel">
+        const { useState, useRef, useEffect } = React;
 
-  try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${apiKey.trim()}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        model: model || 'llama-3.3-70b-versatile',
-        messages: [
-          { 
-            role: "system", 
-            content: "You are a professional medical assistant. Provide clear information. IMPORTANT: Do not use any asterisks (*) or markdown for bolding. Use plain text only. Always include a disclaimer." 
-          },
-          ...messages
-        ],
-        temperature: 0.6,
-      }),
-    });
+        const MedLogo = ({ size = 24 }) => (
+            <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className="text-red-500">
+                <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+        );
 
-    const data = await response.json();
-    res.status(200).json(data);
-  } catch (error) {
-    res.status(500).json({ error: "Failed to connect" });
-  }
-}
+        function App() {
+            const [apiKey, setApiKey] = useState('');
+            const [messages, setMessages] = useState([]);
+            const [input, setInput] = useState('');
+            const [loading, setLoading] = useState(false);
+            const [view, setView] = useState('login'); 
+            const [isDarkMode, setIsDarkMode] = useState(true);
+            const [showSettings, setShowSettings] = useState(false);
+            const [activeModel, setActiveModel] = useState('llama-3.3-70b-versatile');
+            const endRef = useRef(null);
+
+            useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
+
+            const cleanDisplay = (text) => text.replace(/\*/g, '');
+
+            const sendMessage = async () => {
+                if (!input.trim() || loading) return;
+                const userMsg = input.trim();
+                setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
+                setInput('');
+                setLoading(true);
+
+                try {
+                    const res = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ apiKey, model: activeModel, messages: [...messages, { role: 'user', content: userMsg }] })
+                    });
+                    const data = await res.json();
+                    if (data.choices) setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+                } catch (err) {
+                    setMessages(prev => [...prev, { role: 'assistant', content: "Error: Consultation interrupted." }]);
+                } finally {
+                    setLoading(false);
+                }
+            };
+
+            if (view === 'login') {
+                return (
+                    <div className={`relative flex items-center justify-center h-full p-6 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
+                        <div className={`w-full max-w-sm p-10 rounded-[3rem] shadow-2xl text-center border z-10 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                            <div className="flex justify-center mb-6"><MedLogo size={54} /></div>
+                            <h1 className="text-3xl font-black mb-1 tracking-tight uppercase">Med-AI Pro</h1>
+                            <p className="text-red-500 text-[10px] font-bold uppercase tracking-[0.3em] mb-8">Clinical System</p>
+                            
+                            <div className="mb-6">
+                                <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-xs font-black text-red-500 underline hover:text-red-400 transition-colors uppercase">Get Medical API Key Here</a>
+                            </div>
+
+                            <input type="password" placeholder="Enter clinical key" className={`w-full p-4 rounded-2xl mb-4 text-center text-sm font-bold border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200 text-slate-900'}`} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')} className="w-full bg-red-600 p-4 rounded-2xl font-black uppercase text-white shadow-lg active:scale-95 transition-all">Enter Console</button>
+                        </div>
+                        <div className="watermark">Powered by Gemini & Groq</div>
+                    </div>
+                );
+            }
+
+            return (
+                <div className={`flex flex-col h-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
+                    <header className={`p-4 border-b flex justify-between items-center z-30 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
+                        <div className="flex items-center gap-2"><MedLogo size={22} /><span className="font-black text-xs uppercase tracking-widest text-red-500">Med-AI Pro</span></div>
+                        <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-slate-700/20"><svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></button>
+                    </header>
+                    {showSettings && (
+                        <div className={`absolute top-16 right-4 w-64 rounded-[2rem] shadow-2xl p-5 z-40 border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Clinical Models</p>
+                             <button onClick={() => { setActiveModel('llama-3.3-70b-versatile'); setShowSettings(false); }} className={`w-full text-left p-3 rounded-xl text-xs font-bold mb-2 border ${activeModel === 'llama-3.3-70b-versatile' ? 'border-red-500 bg-red-500/10 text-red-400' : (isDarkMode ? 'border-slate-800' : 'border-slate-100')}`}>Llama 3.3 (Expert)</button>
+                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Appearance</p>
+                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full p-3 rounded-xl mb-4 text-xs font-bold bg-red-600 text-white shadow-sm">Toggle Mode</button>
+                             <button onClick={() => setView('login')} className="w-full text-red-500 text-[10px] font-black uppercase tracking-widest text-center">Terminate Session</button>
+                        </div>
+                    )}
+                    <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24">
+                        {messages.map((m, i) => (
+                            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                                <div className={`max-w-[88%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white' : (isDarkMode ? 'bg-slate-900 border border-slate-800 text-slate-200' : 'bg-white border border-slate-200 text-slate-900 shadow-sm')}`}>{cleanDisplay(m.content)}</div>
+                            </div>
+                        ))}
+                    </div>
+                    <footer className="fixed bottom-0 left-0 right-0 p-4 border-t pb-8 bg-inherit">
+                        <div className="flex gap-2 max-w-3xl mx-auto">
+                            <input className={`flex-1 p-4 rounded-2xl text-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-100 border-slate-200 text-slate-900'}`} placeholder="Describe symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
+                            <button onClick={sendMessage} className="bg-red-600 p-4 rounded-2xl shadow-lg px-6"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                        </div>
+                    </footer>
+                </div>
+            );
+        }
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
