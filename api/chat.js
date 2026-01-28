@@ -11,18 +11,20 @@
     <style>
         html, body { height: 100%; margin: 0; padding: 0; overflow: hidden; font-family: sans-serif; }
         #root { height: 100%; display: flex; flex-direction: column; }
-        .watermark { 
+        .bg-watermark { 
             position: absolute; 
-            bottom: 40px; 
-            width: 100%; 
-            text-align: center; 
-            opacity: 0.5; 
-            font-size: 14px; 
-            font-weight: 900; 
-            letter-spacing: 0.15em; 
-            text-transform: uppercase; 
-            pointer-events: none; 
-            z-index: 0; 
+            inset: 0;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+            padding-bottom: 50px;
+            font-size: 14px;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.2em;
+            pointer-events: none;
+            z-index: 0;
+            opacity: 0.4;
         }
         input, button { outline: none !important; -webkit-tap-highlight-color: transparent; }
     </style>
@@ -51,6 +53,7 @@
 
             useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages]);
 
+            // Filter to remove all asterisks
             const cleanDisplay = (text) => text.replace(/\*/g, '');
 
             const sendMessage = async () => {
@@ -67,33 +70,48 @@
                     });
                     const data = await res.json();
                     if (data.choices) setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
-                } catch (err) { setMessages(prev => [...prev, { role: 'assistant', content: "Error: Session lost." }]); } finally { setLoading(false); }
+                } catch (err) { setMessages(prev => [...prev, { role: 'assistant', content: "Connection Error." }]); } finally { setLoading(false); }
             };
 
             if (view === 'login') {
                 return (
                     <div className={`relative flex items-center justify-center h-full p-6 ${isDarkMode ? 'bg-slate-950 text-white' : 'bg-slate-100 text-slate-900'}`}>
-                        {/* THE POWERED BY WATERMARK */}
-                        <div className={`watermark ${isDarkMode ? 'text-red-500/30' : 'text-slate-400'}`}>
+                        
+                        {/* 1. POWERED BY WATERMARK */}
+                        <div className={`bg-watermark ${isDarkMode ? 'text-red-500' : 'text-slate-400'}`}>
                             Powered by Gemini & Groq
                         </div>
 
-                        <div className={`w-full max-w-sm p-10 rounded-[3.5rem] shadow-2xl text-center border z-10 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                        <div className={`w-full max-w-sm p-10 rounded-[3rem] shadow-2xl text-center border z-10 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
                             <div className="flex justify-center mb-6"><MedLogo size={54} /></div>
                             <h1 className="text-3xl font-black mb-1 tracking-tight uppercase text-red-500">Med-AI Pro</h1>
-                            <p className="opacity-80 text-[10px] font-bold uppercase tracking-[0.3em] mb-8">Clinical Assistant</p>
+                            <p className="opacity-60 text-[10px] font-bold uppercase tracking-[0.3em] mb-10">Clinical Intelligence</p>
                             
-                            {/* THE GROQ LINK BUTTON */}
+                            {/* 2. THE GROQ LINK BUTTON */}
                             <div className="mb-6">
-                                <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="block w-full p-4 rounded-2xl bg-red-500/10 text-red-500 text-[11px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20 transition-all">
+                                <a 
+                                    href="https://console.groq.com/keys" 
+                                    target="_blank" 
+                                    rel="noopener noreferrer" 
+                                    className="block w-full p-4 rounded-2xl bg-red-500/10 text-red-500 text-[11px] font-black uppercase tracking-widest border border-red-500/20 hover:bg-red-500/20 transition-all shadow-sm"
+                                >
                                     Get Groq API Key
                                 </a>
                             </div>
 
-                            <input type="password" placeholder="Paste gsk_ key here" className={`w-full p-4 rounded-2xl mb-4 text-center text-sm font-bold border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'}`} value={apiKey} onChange={(e) => setApiKey(e.target.value)} />
+                            <input 
+                                type="password" 
+                                placeholder="Enter gsk_ key" 
+                                className={`w-full p-4 rounded-2xl mb-4 text-center text-sm font-bold border transition-all ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white placeholder-slate-500' : 'bg-slate-50 border-slate-200'}`} 
+                                value={apiKey} 
+                                onChange={(e) => setApiKey(e.target.value)} 
+                            />
                             
-                            <button onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Please enter a valid Groq key')} className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase text-white shadow-xl active:scale-95 transition-all">
-                                Launch System
+                            <button 
+                                onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Enter a valid key')} 
+                                className="w-full bg-red-600 p-5 rounded-2xl font-black uppercase text-white shadow-xl shadow-red-900/20 active:scale-95 transition-all"
+                            >
+                                Start Clinical Session
                             </button>
                         </div>
                     </div>
@@ -102,32 +120,35 @@
 
             return (
                 <div className={`flex flex-col h-full ${isDarkMode ? 'bg-slate-950' : 'bg-slate-50'}`}>
-                    <header className={`p-4 border-b flex justify-between items-center z-30 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200 shadow-sm'}`}>
-                        <div className="flex items-center gap-2"><MedLogo size={22} /><span className="font-black text-xs uppercase tracking-widest text-red-500">Med-AI Pro</span></div>
+                    <header className={`p-4 border-b flex justify-between items-center z-30 ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
+                        <div className="flex items-center gap-2">
+                            <MedLogo size={22} />
+                            <span className="font-black text-xs uppercase tracking-widest text-red-500">Med-AI Pro</span>
+                        </div>
                         <button onClick={() => setShowSettings(!showSettings)} className="p-2 rounded-xl hover:bg-slate-700/20 active:scale-90 transition-all">
                             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
                         </button>
                     </header>
                     {showSettings && (
                         <div className={`absolute top-16 right-4 w-64 rounded-[2rem] shadow-2xl p-6 z-40 border ${isDarkMode ? 'bg-slate-900 border-slate-800' : 'bg-white border-slate-200'}`}>
-                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Diagnostic AI</p>
+                             <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Diagnostic Model</p>
                              <button onClick={() => { setActiveModel('llama-3.3-70b-versatile'); setShowSettings(false); }} className={`w-full text-left p-3 rounded-xl text-xs font-bold mb-3 border ${activeModel === 'llama-3.3-70b-versatile' ? 'border-red-500 bg-red-500/10 text-red-400' : (isDarkMode ? 'border-slate-800' : 'border-slate-100')}`}>Llama 3.3 (Expert)</button>
                              <p className="text-[10px] font-black uppercase opacity-40 mb-3 tracking-[0.2em]">Visuals</p>
-                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full p-3 rounded-xl mb-6 text-xs font-bold bg-red-600 text-white shadow-md">Switch Theme</button>
+                             <button onClick={() => setIsDarkMode(!isDarkMode)} className="w-full p-3 rounded-xl mb-6 text-xs font-bold bg-red-600 text-white shadow-md">Toggle Mode</button>
                              <button onClick={() => setView('login')} className="w-full text-red-500 text-[11px] font-black uppercase tracking-widest text-center">Logout Session</button>
                         </div>
                     )}
                     <div className="flex-1 overflow-y-auto p-4 space-y-6 pb-24" onClick={() => setShowSettings(false)}>
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[88%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white shadow-md' : (isDarkMode ? 'bg-slate-900 border border-slate-800 text-slate-200' : 'bg-white border border-slate-200 text-slate-900 shadow-sm')}`}>{cleanDisplay(m.content)}</div>
+                                <div className={`max-w-[88%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white shadow-md' : (isDarkMode ? 'bg-slate-900 border border-slate-800 text-slate-200 shadow-sm' : 'bg-white border border-slate-200 text-slate-900 shadow-sm')}`}>{cleanDisplay(m.content)}</div>
                             </div>
                         ))}
                     </div>
                     <footer className="fixed bottom-0 left-0 right-0 p-4 border-t pb-8 bg-inherit">
                         <div className="flex gap-2 max-w-3xl mx-auto">
-                            <input className={`flex-1 p-4 rounded-2xl text-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200'}`} placeholder="Describe clinical symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
-                            <button onClick={sendMessage} className="bg-red-600 p-4 rounded-2xl shadow-lg px-6 active:scale-90 transition-all"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
+                            <input className={`flex-1 p-4 rounded-2xl text-sm border ${isDarkMode ? 'bg-slate-800 border-slate-700 text-white' : 'bg-slate-100 border-slate-200'}`} placeholder="Describe symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && sendMessage()} />
+                            <button onClick={sendMessage} className="bg-red-600 p-4 rounded-2xl shadow-lg px-6 active:scale-90 transition-all flex items-center justify-center"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="3"><path d="m22 2-7 20-4-9-9-4Z"/><path d="M22 2 11 13"/></svg></button>
                         </div>
                     </footer>
                 </div>
