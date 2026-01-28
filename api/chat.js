@@ -9,13 +9,14 @@
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <style>
-        body { background-color: #020617; margin: 0; font-family: sans-serif; height: 100vh; color: white; overflow: hidden; }
-        .login-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 2.5rem; width: 100%; max-width: 400px; padding: 3rem; text-align: center; position: relative; z-index: 10; }
-        .watermark { position: absolute; bottom: 30px; left: 0; right: 0; text-align: center; color: #ef4444; opacity: 0.5; font-weight: 900; letter-spacing: 0.3em; text-transform: uppercase; font-size: 14px; pointer-events: none; z-index: 5; }
+        body { background-color: #030712; color: white; margin: 0; font-family: ui-sans-serif, system-ui; height: 100vh; overflow: hidden; }
+        .login-card { background-color: #0f172a; border-radius: 3rem; padding: 4rem 2rem; width: 100%; max-width: 450px; text-align: center; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
+        .watermark { position: fixed; bottom: 20px; width: 100%; text-align: center; color: #ef4444; font-weight: 800; text-transform: uppercase; letter-spacing: 0.2em; font-size: 12px; opacity: 0.8; z-index: 50; }
+        input { outline: none !important; }
     </style>
 </head>
 <body>
-    <div id="root" style="height: 100%;"></div>
+    <div id="root" class="h-full"></div>
     <script type="text/babel">
         const { useState, useRef, useEffect } = React;
 
@@ -26,87 +27,83 @@
             const [input, setInput] = useState('');
             const [loading, setLoading] = useState(false);
 
-            const clean = (txt) => txt.replace(/\*/g, '');
+            const cleanText = (t) => t.replace(/\*/g, '');
 
-            const callAI = async () => {
-                if (!input.trim()) return;
-                const msg = input.trim();
-                setMessages([...messages, { role: 'user', content: msg }]);
+            const onSend = async () => {
+                if(!input.trim()) return;
+                const userMsg = input.trim();
+                setMessages(prev => [...prev, { role: 'user', content: userMsg }]);
                 setInput('');
                 setLoading(true);
                 try {
-                    const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+                    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
                         method: 'POST',
                         headers: { 'Authorization': `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [...messages, { role: 'user', content: msg }] })
+                        body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [...messages, { role: 'user', content: userMsg }] })
                     });
-                    const d = await r.json();
-                    setMessages(prev => [...prev, { role: 'assistant', content: d.choices[0].message.content }]);
-                } catch (e) { alert("Check Key"); } finally { setLoading(false); }
+                    const data = await res.json();
+                    setMessages(prev => [...prev, { role: 'assistant', content: data.choices[0].message.content }]);
+                } catch(e) { alert("Session Error: Check Key"); } finally { setLoading(false); }
             };
 
             if (view === 'login') {
                 return (
-                    <div className="h-full flex flex-col items-center justify-center p-6 relative">
-                        
-                        {/* 1. MANDATORY WATERMARK */}
-                        <div className="watermark">Powered by Gemini & Groq</div>
-
-                        <div className="login-box shadow-2xl">
-                            <svg className="mx-auto mb-4 text-red-500" width="50" height="50" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
-                            <h1 className="text-3xl font-black tracking-tighter mb-1">MED-AI PRO</h1>
-                            <p className="text-red-500 text-[10px] font-bold tracking-[0.3em] uppercase mb-8">Clinical Assistant</p>
-
-                            {/* 2. MANDATORY GROQ LINK */}
-                            <div className="mb-6">
-                                <a href="https://console.groq.com/keys" target="_blank" className="block w-full py-3 rounded-xl bg-red-500/10 border border-red-500/30 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500/20 transition-all">
-                                    Click here for Groq API Key
-                                </a>
-                            </div>
-
+                    <div className="h-full flex flex-col items-center justify-center p-6 bg-[#030712] relative">
+                        <div className="login-card border border-slate-800">
+                            <svg className="mx-auto mb-6 text-red-500" width="60" height="60" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+                            <h1 className="text-4xl font-black mb-1 tracking-tighter">MED-AI PRO</h1>
+                            <p className="text-red-500 text-[10px] font-bold uppercase tracking-[0.4em] mb-8">Clinical Assistant</p>
+                            
+                            {/* GROQ LINK BUTTON */}
+                            <a href="https://console.groq.com/keys" target="_blank" className="block w-full py-3 mb-4 rounded-xl border border-red-500/30 bg-red-500/5 text-red-500 text-[11px] font-black uppercase tracking-widest hover:bg-red-500/10 transition-all">
+                                Get Groq API Key
+                            </a>
+                            
                             <input 
                                 type="password" 
                                 placeholder="Enter clinical key" 
-                                className="w-full bg-slate-800 border border-slate-700 p-4 rounded-xl mb-4 text-center font-bold text-white outline-none focus:border-red-500"
+                                className="w-full bg-[#1e293b] border border-slate-700 p-4 rounded-2xl mb-4 text-center text-white font-bold placeholder-slate-500 focus:border-red-500 transition-all"
                                 value={apiKey}
                                 onChange={(e) => setApiKey(e.target.value)}
                             />
-
+                            
                             <button 
                                 onClick={() => apiKey.startsWith('gsk_') ? setView('chat') : alert('Invalid Key')}
-                                className="w-full bg-red-600 py-4 rounded-xl font-black uppercase shadow-lg active:scale-95 transition-all"
+                                className="w-full bg-red-600 text-white font-black py-5 rounded-2xl shadow-xl active:scale-95 transition-all uppercase tracking-widest"
                             >
                                 INITIALIZE SYSTEM
                             </button>
-
-                            <p className="mt-8 text-[9px] opacity-30 font-bold uppercase tracking-widest">HIPAA Compliant Interface</p>
+                            
+                            <p className="mt-12 text-[9px] uppercase opacity-40 font-bold tracking-widest">HIPAA Compliant Interface</p>
                         </div>
+
+                        {/* POWERED BY WATERMARK */}
+                        <div className="watermark">Powered by Gemini & Groq</div>
                     </div>
                 );
             }
 
             return (
-                <div className="h-full flex flex-col bg-slate-950">
-                    <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-slate-900">
-                        <span className="text-red-500 font-black tracking-tighter uppercase text-sm">Med-AI Pro</span>
-                        <button onClick={() => setView('login')} className="text-[10px] font-bold opacity-40 uppercase">Exit</button>
+                <div className="flex flex-col h-full bg-[#030712]">
+                    <header className="p-4 border-b border-slate-800 flex justify-between items-center bg-[#0f172a]">
+                        <span className="text-red-500 font-black tracking-tighter">MED-AI PRO</span>
+                        <button onClick={() => setView('login')} className="text-[10px] font-bold opacity-50 uppercase">Terminate</button>
                     </header>
-                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-28">
+                    <div className="flex-1 overflow-y-auto p-4 space-y-4 pb-32">
                         {messages.map((m, i) => (
                             <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white' : 'bg-slate-900 border border-slate-800 text-slate-100'}`}>
-                                    {clean(m.content)}
+                                <div className={`max-w-[85%] p-4 rounded-2xl text-sm ${m.role === 'user' ? 'bg-red-600 text-white' : 'bg-[#0f172a] border border-slate-800 text-slate-100'}`}>
+                                    {cleanText(m.content)}
                                 </div>
                             </div>
                         ))}
-                        {loading && <div className="text-red-500 text-[10px] font-bold animate-pulse uppercase">Processing...</div>}
                     </div>
-                    <div className="fixed bottom-0 w-full p-4 bg-slate-950/90 backdrop-blur-md">
+                    <footer className="fixed bottom-0 w-full p-4 bg-[#030712]/90 backdrop-blur-md border-t border-slate-800">
                         <div className="flex gap-2 max-w-2xl mx-auto">
-                            <input className="flex-1 p-4 rounded-xl bg-slate-800 border border-slate-700 text-white outline-none" placeholder="Symptoms..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && callAI()} />
-                            <button onClick={callAI} className="bg-red-600 px-6 rounded-xl font-bold uppercase text-xs">Send</button>
+                            <input className="flex-1 p-4 rounded-xl bg-[#0f172a] border border-slate-800 text-white outline-none focus:border-red-500" placeholder="Clinical inquiry..." value={input} onChange={(e) => setInput(e.target.value)} onKeyPress={(e) => e.key === 'Enter' && onSend()} />
+                            <button onClick={onSend} className="bg-red-600 px-8 rounded-xl font-bold uppercase text-xs">Send</button>
                         </div>
-                    </div>
+                    </footer>
                 </div>
             );
         }
